@@ -43,7 +43,7 @@ defmodule Lab42.StateMachine do
   ### Starting the whole thing.
   
   Create the _Transition Defintions Map_, knowing that the State Machine will start with `current_state` equal to `:start`,
-  yes I konw, naming is difficult ;).
+  yes I know, naming is difficult ;).
 
   Then run the whole thing like that:
 
@@ -68,7 +68,8 @@ defmodule Lab42.StateMachine do
         ...(1)> run(input, count, states)
         {:start, ~w{alpha beta}, 2}
 
-  N.B. That the `true` trigger alwyas matches, all other triggers are passed into `Regex.match(trigger, input_line)`
+  N.B. That the `true` trigger always matches, other triggers are either regular expressions, which are used
+  as follows: `Regex.match(trigger, input)`, or functions, which are used as one might easily guess, thusly: `trigger.(input)`
 
   One could argue that a default behavior of copying the current input to the output might be convenient, but that might
   lead to difficulties in debugging state machines. (Maybe in later versions with an option for `run`?)
@@ -130,9 +131,60 @@ defmodule Lab42.StateMachine do
         ...(6)> run(input, states)
         {:start, [:ignore, "beta", :ignore], nil}
 
+  Now let us look at a final example, that will use the following features, not yet explored:
+
+  - Stopping with the `:halt` atom form of the transformer, by its shortcut
+  - Stopping with the `{:halt, value}` tuple form of the transformer
+  - Creating a function to rerun with the same states
+  - Using constant functions
+  - Using function triggers
+
+
+        iex(7)> summer = fn data, {_, input} -> %{data|sum: data.sum + input} end
+        ...(7)> states = %{ 
+        ...(7)>   start: [
+        ...(7)>     {&(&1>8), :halt},
+        ...(7)>     {&(&1<1), fn {_, input} -> {:halt, input} end, constant(:negative)},
+        ...(7)>     {&(rem(&1,2)==0), push_constant(:even), summer, :even},
+        ...(7)>     {true} ],
+        ...(7)>   even: [
+        ...(7)>     {&(rem(&1,2)==0), :halt, constant(:more_evens)},
+        ...(7)>     {true, :id, summer }
+        ...(7)>   ] }
+        ...(7)> state_machine = make_state_machine(%{sum: 0}, states)
+        ...(7)> [
+        ...(7)>    state_machine.(1..10|>Enum.into([])),
+        ...(7)>    state_machine.([1, 2, 3]),
+        ...(7)>    state_machine.([1, 9]),
+        ...(7)>    state_machine.([1, -1]),
+        ...(7)>    state_machine.([1, 3, 5]) ]
+        [ {:even, [1, :even, 3], :more_evens},
+          {:even, [1, :even, 3], %{sum: 5}},
+          {:start, [1], %{sum: 0}},
+          {:start, [1, -1], :negative},
+          {:start, [1, 3, 5], %{sum: 0}} ]
+
 
 
   """
+
+  @doc """
+  A helper creating an updater function that sets data to a constant value
+  """
+  def constant(constant_value), do: fn _, _ -> constant_value end
+
+  @doc """
+  A convenience helper to run the same state machine on different inputs
+  """
+  def make_state_machine(data_or_states, states \\ nil)
+  def make_state_machine(states, nil), do: make_state_machine(nil, states)
+  def make_state_machine(data, states), do: &run(&1, data, states)
+
+  @doc """
+  A helper creating a transformer function that pushes a constant value to the output 
+  """
+  def push_constant(constant_value), do: fn _ -> {:push, constant_value} end
+
 
   @spec run( list(), transition_map_t() ) :: result_t()
   def run(input, states), do: run(input, nil, states)
