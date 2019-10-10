@@ -1,12 +1,12 @@
-# lab42_state_machine
+# lab42_simple_state_machine
 
 <%= xtra.do_not_edit_warning template: template %>
 
-[![Build Status](https://travis-ci.org/RobertDober/lab42_state_machine.svg?branch=master)](https://travis-ci.org/RobertDober/lab42_state_machine)
-[![Coverage Status](https://coveralls.io/repos/github/RobertDober/lab42_state_machine/badge.svg?branch=master)](https://coveralls.io/github/RobertDober/lab42_state_machine?branch=master)
-[![Hex.pm](https://img.shields.io/hexpm/v/lab42_state_machine.svg)](https://hex.pm/packages/lab42_state_machine)
-[![Hex.pm](https://img.shields.io/hexpm/dw/lab42_state_machine.svg)](https://hex.pm/packages/lab42_state_machine)
-[![Hex.pm](https://img.shields.io/hexpm/dt/lab42_state_machine.svg)](https://hex.pm/packages/lab42_state_machine)
+[![Build Status](https://travis-ci.org/RobertDober/lab42_simple_state_machine.svg?branch=master)](https://travis-ci.org/RobertDober/lab42_simple_state_machine)
+[![Coverage Status](https://coveralls.io/repos/github/RobertDober/lab42_simple_state_machine/badge.svg?branch=master)](https://coveralls.io/github/RobertDober/lab42_simple_state_machine?branch=master)
+[![Hex.pm](https://img.shields.io/hexpm/v/lab42_simple_state_machine.svg)](https://hex.pm/packages/lab42_simple_state_machine)
+[![Hex.pm](https://img.shields.io/hexpm/dw/lab42_simple_state_machine.svg)](https://hex.pm/packages/lab42_simple_state_machine)
+[![Hex.pm](https://img.shields.io/hexpm/dt/lab42_simple_state_machine.svg)](https://hex.pm/packages/lab42_simple_state_machine)
 
 
 <%= xtra.moduledoc("Lab42.StateMachine") %>
