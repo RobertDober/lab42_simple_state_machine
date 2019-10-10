@@ -161,7 +161,7 @@ Now let us look at a final example, that will use the following features, not ye
       ...(7)>     {&(rem(&1,2)==0), :halt, constant(:more_evens)},
       ...(7)>     {true, :id, summer }
       ...(7)>   ] }
-      ...(7)> state_machine = make_state_machine(%{sum: 0}, states)
+      ...(7)> state_machine = make_machine(%{sum: 0}, states)
       ...(7)> [
       ...(7)>    state_machine.(1..10|>Enum.into([])),
       ...(7)>    state_machine.([1, 2, 3]),

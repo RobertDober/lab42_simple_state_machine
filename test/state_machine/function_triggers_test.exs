@@ -4,7 +4,7 @@ defmodule StateMachine.FunctionTriggersTest do
   import Lab42.StateMachine
   
   setup do
-    {:ok, machine: make_state_machine(%{sum: 0}, states())}
+    {:ok, machine: make_machine(%{sum: 0}, states())}
   end
   describe "function triggers" do 
     test "halt immediately" do
@@ -35,7 +35,7 @@ defmodule StateMachine.FunctionTriggersTest do
         {true, :id, &summer/2 }
       ]}
   end
-        # state_machine = make_state_machine(%{sum: 0}, states)
+        # state_machine = make_machine(%{sum: 0}, states)
         # [
         #    state_machine.(1..10|>Enum.into([])),
         #    state_machine.([1, 2, 3]),
