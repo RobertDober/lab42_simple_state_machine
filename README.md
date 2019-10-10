@@ -68,6 +68,8 @@ The empty map passed in will cause havoc though
       ...(0)> Lab42.StateMachine.run(input, my_data, %{})
       {:error, "No transitions found for current state", :start}  
 
+### Specifying Transitions
+
 A minimal example might be a line counter
 
       iex(1)> input = ~w{alpha beta}
@@ -141,7 +143,7 @@ And a third simplifaction is that we can omit to pass nil as data, but note that
       ...(6)> run(input, states)
       {:start, [:ignore, "beta", :ignore], nil}
 
-Now let us look at a final example, that will use the following features, not yet explored:
+Now let us look at a complex example, that will use the following features, not yet explored:
 
 - Stopping with the `:halt` atom form of the transformer, by its shortcut
 - Stopping with the `{:halt, value}` tuple form of the transformer
@@ -174,8 +176,44 @@ Now let us look at a final example, that will use the following features, not ye
         {:start, [1, -1], :negative},
         {:start, [1, 3, 5], %{sum: 0}} ]
 
+### Summary of Shortcuts and Transformer Semantics
+
+As we have seen in the examples above, the StateMachine is driven by the _Transitions Map_ and the result of the
+`transformer` function.
+
+The returned `data` value is influenced by the result of the `updater` function.
+
+In order to write shorter _Transition Maps_ transitions can be shortened and symbolic function names can be used.
+
+Let us see how transitions are _normalized_ by the StateMachine before they are executed.
 
 
+| Specified                           |        Normalize                                     |  Remarks            |
+|------------------------------------|------------------------------------------------------|------------------------|
+|`{trigger, function, function, state}` |   same value                                         | already normalized|
+|`{trigger, function, function}`     |  `{trigger, function, function, current_state}` | normalization is done during tuntime, thusly `current_state` is known |
+|`{trigger, function }`          | `{trigger, function, identity2, current_state}` | given the interface of `updater` `identity2` is defined as `fn d, _ -> d end` |
+|`{trigger}` | `{trigger, identity1, identity2, current_state}` | `identity1` is for the `transformer` and thusly `fn {_, v} -> v end`
+
+As can be seen sometimes the defaults, are not available, because we need to provide the `new_state` in the transition.
+In that case the following symbols can be used for the `transformer`
+
+|   Symbolic Transformer  |  Expanded to                         |
+|-------------------------|--------------------------------------|
+|      `:id`              | `fn {_, v} -> v end`                 |
+|   `:ignore`             | `fn _ -> :ignore end`                |
+|   `:halt`               | `fn _ -> :halt end`                  |
+
+For the `updater` there is only `:id` which expands to `fn d, _ -> d end` as mentioned above.
+
+In action that would give
+
+      iex(8)> states = %{
+      ...(8)>    start: [{true, :id, :id, :stop}],
+      ...(8)>    stop:  [{true, fn _ -> {:halt, "..."} end, :id}]
+      ...(8)> }
+      ...(8)> run(~w[Headline Rest MoreRest], states)
+      {:stop, ~w[Headline ...], nil}
 
 
 
