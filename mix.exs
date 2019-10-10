@@ -2,12 +2,12 @@ defmodule Lab42StateMachine.MixProject do
   use Mix.Project
 
   @description "A Simple State Machine"
-  @url "https://github.com/robertdober/lab42_state_machine"
+  @url "https://github.com/robertdober/lab42_simple_state_machine"
   @version "0.1.0"
   def project do
     [
       aliases: [docs: &build_docs/1],
-      app: :lab42_state_machine,
+      app: :lab42_simple_state_machine,
       deps: deps(),
       description: @description,
       elixir: "~> 1.9",
