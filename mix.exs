@@ -3,7 +3,7 @@ defmodule Lab42StateMachine.MixProject do
 
   @description "A Simple State Machine"
   @url "https://github.com/robertdober/lab42_simple_state_machine"
-  @version "0.1.0"
+  @version "0.2.0"
   def project do
     [
       aliases: [docs: &build_docs/1],
@@ -68,7 +68,7 @@ defmodule Lab42StateMachine.MixProject do
   @prerequisites """
   run `mix escript.install hex ex_doc` and adjust `PATH` accordingly
   """
-  @module_name "Lab42.StateMachine"
+  @module_name "Lab42.SimpleStateMachine"
   defp build_docs(_) do
     Mix.Task.run("compile")
     ex_doc = Path.join(Mix.Local.path_for(:escript), "ex_doc")
