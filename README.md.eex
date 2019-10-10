@@ -9,7 +9,7 @@
 [![Hex.pm](https://img.shields.io/hexpm/dt/lab42_simple_state_machine.svg)](https://hex.pm/packages/lab42_simple_state_machine)
 
 
-<%= xtra.moduledoc("Lab42.StateMachine") %>
+<%= xtra.moduledoc("Lab42.SimpleStateMachine") %>
 
 
 ## Author
