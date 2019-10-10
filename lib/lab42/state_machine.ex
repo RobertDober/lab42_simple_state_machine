@@ -171,11 +171,13 @@ defmodule Lab42.StateMachine do
   @doc """
   A helper creating an updater function that sets data to a constant value
   """
+  @spec constant( const_type ) :: const_type when const_type: any()
   def constant(constant_value), do: fn _, _ -> constant_value end
 
   @doc """
   A convenience helper to run the same state machine on different inputs
   """
+  @spec make_state_machine( any(), maybe(map()) ) :: (list() -> result_t())
   def make_state_machine(data_or_states, states \\ nil)
   def make_state_machine(states, nil), do: make_state_machine(nil, states)
   def make_state_machine(data, states), do: &run(&1, data, states)
@@ -183,13 +185,15 @@ defmodule Lab42.StateMachine do
   @doc """
   A helper creating a transformer function that pushes a constant value to the output 
   """
+  @spec push_constant( const_type ) :: ((any()) -> {:push, const_type}) when const_type: any()
   def push_constant(constant_value), do: fn _ -> {:push, constant_value} end
 
 
-  @spec run( list(), transition_map_t() ) :: result_t()
-  def run(input, states), do: run(input, nil, states)
-
-  @spec run( list(), any(), transition_map_t ) :: result_t() 
+  @spec run( list(), any(), maybe(map()) ) :: result_t()
+  def run(input, data_or_states, states_or_nil \\ nil)
+  def run(input, states, nil) do
+    Lab42.StateMachine.Runner.run(:start, input, [], nil, states)
+  end
   def run(input, data, states) do
     Lab42.StateMachine.Runner.run(:start, input, [], data, states)
   end

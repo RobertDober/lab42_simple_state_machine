@@ -21,27 +21,32 @@ defmodule Lab42.StateMachine.Runner do
   @doc """
   Convenience transformer function to stop the state machine, can be used with the atom `:halt`
   """
+  @spec halt_transfo( any() ) :: :halt
   def halt_transfo(_), do: :halt
 
   @doc """
   Convenience function to push an input to the output without changing it, can be used with the atom `:id` in
   the transformer position of a transition, e.g. `{~r{alpha}, :id, fn count, _ -> count + 1 end}`
   """
+  @spec ident_transfo( match_t() ) :: any()
   def ident_transfo({_, line}), do: line
 
   @doc """
   Convenience function to not change the data. It can be used with the atom `:id` in
   the updater position of a transition, e.g. `{~r{alpha}, fn {_, line} -> String.reverse(line), :id}`
   """
+  @spec ident_updater( any(), any() ) :: any()
   def ident_updater(data, _), do: data
 
   @doc """
   Convenience function to ignore an input, it can be used with the atom `:ignore` in
   the transformer position of a transition, e.g. `{~r{alpha}, :ignore, fn count, _ -> count + 1 end}`
   """
+  @spec ignore_input( any() ) :: :ignore
   def ignore_input(_), do: :ignore
 
 
+  @spec _execute_transition( transition_t(), any(), any(), any() ) :: {state_t(), any(), any()}   
   defp _execute_transition(transition, matches, input, data)
   defp _execute_transition({_, transformer, updater, new_state}, matches, input, data) do
     transformed = transformer.({matches, input})
@@ -49,11 +54,13 @@ defmodule Lab42.StateMachine.Runner do
     {new_state, transformed, updated}
   end
 
+  @spec _match_trigger( trigger_t(), any() ) :: any()
   defp _match_trigger(trigger, input)
   defp _match_trigger(true, _), do: []
   defp _match_trigger(fn_trigger, input) when is_function(fn_trigger), do: fn_trigger.(input)
   defp _match_trigger(rgx_trigger, input), do: Regex.run(rgx_trigger, input)
 
+  @spec _normalize_transition( incomplete_transition_t(), state_t() ) :: transition_t()
   defp _normalize_transition(transition, current_state)
   defp _normalize_transition({trigger}, current_state), do: {trigger, &ident_transfo/1, &ident_updater/2, current_state}
   defp _normalize_transition({trigger, f1}, current_state), do: _replace_symbolic_fns({trigger, f1, &ident_updater/2, current_state})
@@ -68,6 +75,7 @@ defmodule Lab42.StateMachine.Runner do
   @predefined_updaters %{
     id: &__MODULE__.ident_updater/2
   }
+  @spec _replace_symbolic_fns( incomplete_transition_t() ) :: transition_t()
   defp _replace_symbolic_fns(transition)
   defp _replace_symbolic_fns({trigger, f1, f2, state}) when is_atom(f1) do
     _replace_symbolic_fns({trigger, Map.fetch!(@predefined_transformers, f1), f2, state})
@@ -77,6 +85,7 @@ defmodule Lab42.StateMachine.Runner do
   end
   defp _replace_symbolic_fns(really_ok_now), do: really_ok_now
 
+  @spec _run_normalized_transitions( state_t(), normalized_transitions_t(), list(), list(), any(), map() ) :: result_t()
   defp _run_normalized_transitions(current_state, transitions, input, result, data, states)
   defp _run_normalized_transitions(current_state, [{trigger,_,_,_}=tran|trans], [input|rest], result, data, states) do
 #    insp {:run_norm, current_state, tran, input, result, data}
@@ -88,6 +97,7 @@ defmodule Lab42.StateMachine.Runner do
     end
   end
 
+  @spec _run_transitions( state_t(), list(incomplete_transition_t()), list(), list(), any(), map() ) :: result_t()
   defp _run_transitions(current_state, transitions, input, result, data, states)
   defp _run_transitions(current_state, [], [input|_], _result, _data, _states) do
     # It is preferable to not allow this, so that an explicit `true` trigger needs to be
@@ -100,14 +110,16 @@ defmodule Lab42.StateMachine.Runner do
     _run_normalized_transitions(current_state, [_normalize_transition(tran, current_state)|trans], input, result, data, states)
   end
 
+  
+  @spec _loop( {state_t(), any(), any()}, list(), list(), map() ) :: result_t()
   defp _loop(new_data_triple, rest, result, states)
   defp _loop({new_state, :halt, updated}, _rest, result, _states) do
     # Trigger halt with empty input
-    run(new_state, [], result, updated, nil)
+    run(new_state, [], result, updated, %{})
   end
   defp _loop({new_state, {:halt, value}, updated}, _rest, result, _states) do
     # Trigger halt with empty input
-    run(new_state, [], [value|result], updated, nil)
+    run(new_state, [], [value|result], updated, %{})
   end
   defp _loop({new_state, :ignore, updated}, rest, result, states) do
     run(new_state, rest, result, updated, states)
