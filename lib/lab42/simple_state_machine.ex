@@ -61,10 +61,8 @@ defmodule Lab42.SimpleStateMachine do
 
   * `:end` state
 
-  Can only have one `transition_fn` which is invoked at the end of the input list, **only** if the `current_state`
-  does not have an `:end` trigger as explained above.
+  Can only have one `transition_fn` which is invoked at the end of the input list.
 
-  **N.B.** if no `:end` state or trigger is present the machine returns its `Match` struct's `data:` field.
 
   #### Reserved States
   
@@ -89,12 +87,19 @@ defmodule Lab42.SimpleStateMachine do
         ...(0)>   %{data|errors: [input|data.errors]} end
         ...(0)> states = %{
         ...(0)>   start: [
-        ...(0)>     {~r(\d+), fn %{matched: [d], data: data} -> parse_and_add.(d, data) end},
+        ...(0)>     {~r(\\d+), fn %{matched: [d], data: data} -> parse_and_add.(d, data) end},
         ...(0)>     {true,    add_error},
-        ...(0)>     {:end, fn %{data: %{errors: errors, sum: sum}} -> {sum, Enum.reverse(errors)} end}
-        ...(0)>   ]}
+        ...(0)>   ],
+        ...(0)>   end: fn %{data: %{errors: errors, sum: sum}} -> {sum, Enum.reverse(errors)} end }
         ...(0)> run(~w{12 error 30 incorrect}, %{sum: 0, errors: []}, states)
         {42, ~w(error incorrect)}
 
   """
+
+  import Lab42.SimpleStateMachine.Data
+  import Lab42.SimpleStateMachine.Runner
+
+  def run(input, data_or_states, states_or_nil \\ nil)
+  def run(input, states, nil), do: run(:start, input, from_data(nil) , states)
+  def run(input, data, states),do: run(:start, input, from_data(data), states)
 end
