@@ -80,10 +80,10 @@ defmodule Lab42.SimpleStateMachine do
   
   Let's start with a single state machine.
 
-        iex(0)> parse_and_add = fn(string, %{sum: sum}=data) -> 
+        iex(0)> parse_and_add = fn(string, data) -> 
         ...(0)>   {n, _} = Integer.parse(string)
         ...(0)>   %{data|sum: data.sum + n} end
-        ...(0)> add_error = fn(%{input: input, data: %{errors: errors}=data}) ->
+        ...(0)> add_error = fn(%{input: input, data: data}) ->
         ...(0)>   %{data|errors: [input|data.errors]} end
         ...(0)> states = %{
         ...(0)>   start: [
@@ -94,6 +94,63 @@ defmodule Lab42.SimpleStateMachine do
         ...(0)> run(~w{12 error 30 incorrect}, %{sum: 0, errors: []}, states)
         {42, ~w(error incorrect)}
 
+  If the data is initially nil it needs not be passed into `run` and if the `transaction_fn` is a nop, it can be designated
+  by `nil`.
+
+        iex(1)> states = %{
+        ...(1)>   start: [
+        ...(1)>     { ~r{(\\d+)}, fn %{matched: [_, d]} -> d end, :halt },
+        ...(1)>     { true, nil } ]}
+        ...(1)> run(~w{ hello 42 84 }, states)
+        "42"
+
+  The difference between `:halt` and `:end` can be demonstrated with these slighly modified machines
+
+        iex(2)> sm1 = %{
+        ...(2)>   start: [
+        ...(2)>     { ~r{(\\d+)}, fn %{matched: [_, d]} -> d end, :halt },
+        ...(2)>     { true, nil } ],
+        ...(2)>   end: fn %{data: x} -> {n, _} = Integer.parse(x); n end }
+        ...(2)> sm2 = %{
+        ...(2)>   start: [
+        ...(2)>     { ~r{(\\d+)}, fn %{matched: [_, d]} -> d end, :end },
+        ...(2)>     { true, nil } ],
+        ...(2)>   end: fn %{data: x} -> {n, _} = Integer.parse(x); n end }
+        ...(2)> { run(~w{ hello 42 84 }, sm1), run(~w{ hello 42 84 }, sm2) }
+        {"42", 42}
+
+  So far we have only seen `Regex` and `true` triggers, the next example uses function triggers
+
+        iex(3)> odd? = &(rem(&1, 2) == 1)
+        ...(3)> states = %{ 
+        ...(3)>   start: [
+        ...(3)>     {odd?, fn %{input: n, data: sum} -> sum + n end},
+        ...(3)>     {true} ] }
+        ...(3)> run(1..6|>Enum.into([]), 0, states)
+        9
+
+  Some might suggest that the `{true}` transition should be a default, but we prefer to raise an error
+  if no transition matches
+
+        iex(4)> odd? = &(rem(&1, 2) == 1)
+        ...(4)> states = %{ 
+        ...(4)>   start: [
+        ...(4)>     {odd?, fn %{input: n, data: sum} -> sum + n end} ]}
+        ...(4)> run(1..6|>Enum.into([]), 0, states)
+        ** (RuntimeError) No transition found in state :start, on input 2
+
+  An even more obvious exception is raised if a state has no transitions defined, that holds for the predefined
+  `:start` state as for any other state.
+
+        iex(5)> states=%{}
+        ...(5)> run(~w[alpha beta], states)
+        ** (RuntimeError) No transitions defined for state :start
+
+        iex(6)> states=%{
+        ...(6)>   start: [
+        ...(6)>     {true, nil, :second} ]}
+        ...(6)> run(~w[alpha beta], states)
+        ** (RuntimeError) No transitions defined for state :second
   """
 
   import Lab42.SimpleStateMachine.Data
