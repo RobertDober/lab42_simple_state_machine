@@ -34,7 +34,7 @@ defmodule Lab42StateMachine.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:dialyxir, "~> 0.5.1"},
+      {:dialyxir, "~> 0.5.1", only: [:dev]},
       {:excoveralls, "~> 0.11.2", only: [:test]},
       {:extractly,   "~> 0.1.4", only: [:dev]}
       # {:dep_from_hexpm, "~> 0.3.0"},
