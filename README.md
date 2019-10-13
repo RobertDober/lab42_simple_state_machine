@@ -13,207 +13,156 @@ and any changes you make in this file will most likely be lost
 [![Hex.pm](https://img.shields.io/hexpm/dt/lab42_simple_state_machine.svg)](https://hex.pm/packages/lab42_simple_state_machine)
 
 
-# Lab42.StateMachine
+## A simple state machine.
 
-## Synopsis
+`SimpleStateMachine` is a minimalistic approach to write _State Machines_ which operate on a list of inputs.
 
-A simple State Machine operating on a list of input values, a map of transition definitions
-and an accumulator.
+The machine is defined by a map, mapping, transitions to each state, called `transition_map`.
 
-## What is the _Transition Definitions Map_?
-
-It maps each `state` to a list of `transitions`. Each `transition` is of the following format, as
-defined by type `transition_t`
-
-```elixir
-{trigger, transformer, updater, new_state}
-
-```
-
-## State, did you say state?
-
-Yes I did, and what I mean by it is that the State Machine keeps track of its state (very surprising)
-and some data, passed into by the user.
-
-## How do these _Transitions_ transform the input?
-
-The State Machine processes its input in a loop in which, depending on the current input element, designated
-as `input` and the current state, designated as `current_state` a transition is triggered.
-
-Data is passed in like an accumulator in `Enum.reduce` it is designated as `data`.
-
-The triggered transition will define the `current_state` of the next loop, if any, and perform actions defining what
-goes to the output and how `data` changes.
-
-As one might guess these actions are performed by the `transformer` and the `updater` of the triggered transition.
+        %{ start: [ transition, ... ],
+            some_state: [transition, ...] }
 
 
-## So what is the contract?
+### Format of a Transition
 
-### Starting the whole thing.
+`{trigger, transition_fn, new_state}` or, if the state is not supposed to change, `{trigger, transition_fn}`
 
-Create the _Transition Defintions Map_, knowing that the State Machine will start with `current_state` equal to `:start`,
-yes I know, naming is difficult ;).
+For each input in the list of inputs the machine will try to match the input with the `trigger` from the transition. 
 
-Then run the whole thing like that:
+If such a match is found the `transition_fn` is called with a `%SimpleStateMachine.Match` struct which will give access
+to the following fields:
 
-```elixir
-  Lab42.StateMachine.run(input, my_data, %{})
-```
+        %SimpleStateMachine.Match{
+           input: "The element from the input list",
+           data:  "Injected value when the state machine is run, like an accumulator in Enum.reduce",
+           matched: "A value depending on what kind of trigger was used"}
 
-The empty map passed in will cause havoc though
+The return value of the `transition_fn` will be injected into the `Match` struct's `data:` field for the next
+loop.
 
-      iex(0)> input = ~w(alpha)
-      ...(0)> my_data = %{n: 42}
-      ...(0)> Lab42.StateMachine.run(input, my_data, %{})
-      {:error, "No transitions found for current state", :start}  
+#### Types of triggers
 
-### Specifying Transitions
+* Function triggers
 
-A minimal example might be a line counter
+...are the most versatile triggers, when a function trigger triggers on an input it returns an unfalsy
+value that is passed into the `Match` struct's `matched:` field.
 
-      iex(1)> input = ~w{alpha beta}
-      ...(1)> count = 0
-      ...(1)> states = %{
-      ...(1)>   start: [ {true, fn {_, line} -> line end, fn count, _ -> count + 1 end, :start} ]
-      ...(1)> } 
-      ...(1)> run(input, count, states)
-      {:start, ~w{alpha beta}, 2}
+* Regex triggers
 
-N.B. That the `true` trigger always matches, other triggers are either regular expressions, which are used
-as follows: `Regex.match(trigger, input)`, or functions, which are used as one might easily guess, thusly: `trigger.(input)`
+...can, obviously, only be used with `String` inputs. The result of `Regex.run(trigger, input)` is passed into
+the `Match` struct's `matched:` field.
 
-One could argue that a default behavior of copying the current input to the output might be convenient, but that might
-lead to difficulties in debugging state machines. (Maybe in later versions with an option for `run`?)
+* `true` trigger
 
-On the same token some StateMachines, like the counter above collect the output without needing it, although we will
-learn below how to avoid this, a global option to not collect will make the _Transitions Map_ more concise.
-
-Therefore the following will happen
-
-      iex(2)> input = ~w{alpha beta}
-      ...(2)> states = %{
-      ...(2)>   start: []
-      ...(2)> } 
-      ...(2)> run(input, nil, states)
-      {:error, "No trigger matched the current input \"alpha\"", :start}
-
-Let us return to the correctly working example, let us simplify that rather expressive transition
-
-      iex(3)> input = ~w{alpha beta}
-      ...(3)> states = %{
-      ...(3)>   start: [ {true, :id, fn count, _ -> count + 1 end, :start} ]
-      ...(3)> }
-      ...(3)> run(input, 0, states)
-      {:start, ~w(alpha beta), 2}
-
-So we can use a shortcut for copying the input to the output, that is better already, but still, why
-create the output that is not needed, let us use the atom form of the transformer function
-
-      iex(4)> input = ~w{alpha beta}
-      ...(4)> states = %{
-      ...(4)>   start: [ {true, fn _ -> :ignore end, fn count, _ -> count + 1 end, :start} ]
-      ...(4)> }
-      ...(4)> run(input, 0, states)
-      {:start, ~w(), 2}
-
-As there is a shortcut for `:id` so there is one for `:ignore`
-
-      iex(5)> input = ~w{alpha beta}
-      ...(5)> states = %{
-      ...(5)>   start: [ {true, :ignore, fn count, _ -> count + 1 end, :start} ]
-      ...(5)> }
-      ...(5)> run(input, 0, states)
-      {:start, ~w(), 2}
-
-But what if we want to have `:ignore` in the output? Let us assume that we want to replace all `"alphas"` with
-`:ignore`. We can use the tuple form of the transformer in this case.
-
-This example also demonstrates that we do not need to specify the updater and the new state if these do
-not change and that even pushing the input to the output can be omitted, therefore the transitions `{true, :id}` and
-`{true}` have the same semantics.
-
-And a third simplifaction is that we can omit to pass nil as data, but note that it will present in the result.
-
-      iex(6)> input = ~w{alpha beta alpha}
-      ...(6)> states = %{
-      ...(6)>   start: [ 
-      ...(6)>     {~r{alpha}, fn _ -> {:push, :ignore} end},
-      ...(6)>     {true}] }
-      ...(6)> run(input, states)
-      {:start, [:ignore, "beta", :ignore], nil}
-
-Now let us look at a complex example, that will use the following features, not yet explored:
-
-- Stopping with the `:halt` atom form of the transformer, by its shortcut
-- Stopping with the `{:halt, value}` tuple form of the transformer
-- Creating a function to rerun with the same states
-- Using constant functions
-- Using function triggers
+... matches always, `true` is passed into the `matched:` field.
 
 
-      iex(7)> summer = fn data, {_, input} -> %{data|sum: data.sum + input} end
-      ...(7)> states = %{ 
-      ...(7)>   start: [
-      ...(7)>     {&(&1>8), :halt},
-      ...(7)>     {&(&1<1), fn {_, input} -> {:halt, input} end, constant(:negative)},
-      ...(7)>     {&(rem(&1,2)==0), push_constant(:even), summer, :even},
-      ...(7)>     {true} ],
-      ...(7)>   even: [
-      ...(7)>     {&(rem(&1,2)==0), :halt, constant(:more_evens)},
-      ...(7)>     {true, :id, summer }
-      ...(7)>   ] }
-      ...(7)> state_machine = make_machine(%{sum: 0}, states)
-      ...(7)> [
-      ...(7)>    state_machine.(1..10|>Enum.into([])),
-      ...(7)>    state_machine.([1, 2, 3]),
-      ...(7)>    state_machine.([1, 9]),
-      ...(7)>    state_machine.([1, -1]),
-      ...(7)>    state_machine.([1, 3, 5]) ]
-      [ {:even, [1, :even, 3], :more_evens},
-        {:even, [1, :even, 3], %{sum: 5}},
-        {:start, [1], %{sum: 0}},
-        {:start, [1, -1], :negative},
-        {:start, [1, 3, 5], %{sum: 0}} ]
+* `:end` trigger
 
-### Summary of Shortcuts and Transformer Semantics
+... does never match, however its associated `transaction_fn` is called, and its result will bet the result
+of the machine's run. See also the `end:` state below.
 
-As we have seen in the examples above, the StateMachine is driven by the _Transitions Map_ and the result of the
-`transformer` function.
+#### Special States
 
-The returned `data` value is influenced by the result of the `updater` function.
+Two states are special in the sense that their names are fixed.
 
-In order to write shorter _Transition Maps_ transitions can be shortened and symbolic function names can be used.
+* `:start`  state
 
-Let us see how transitions are _normalized_ by the StateMachine before they are executed.
+Is defined like any other state but is the machine's initial `current_state`. It is **obviously** necessarily
+present in the `transition_map`. 
+
+* `:end` state
+
+Can only have one `transition_fn` which is invoked at the end of the input list.
 
 
-| Specified                           |        Normalize                                     |  Remarks            |
-|------------------------------------|------------------------------------------------------|------------------------|
-|`{trigger, function, function, state}` |   same value                                         | already normalized|
-|`{trigger, function, function}`     |  `{trigger, function, function, current_state}` | normalization is done during tuntime, thusly `current_state` is known |
-|`{trigger, function }`          | `{trigger, function, identity2, current_state}` | given the interface of `updater` `identity2` is defined as `fn d, _ -> d end` |
-|`{trigger}` | `{trigger, identity1, identity2, current_state}` | `identity1` is for the `transformer` and thusly `fn {_, v} -> v end`
+#### Reserved States
 
-As can be seen sometimes the defaults, are not available, because we need to provide the `new_state` in the transition.
-In that case the following symbols can be used for the `transformer`
+* `:halt` state
 
-|   Symbolic Transformer  |  Expanded to                         |
-|-------------------------|--------------------------------------|
-|      `:id`              | `fn {_, v} -> v end`                 |
-|   `:ignore`             | `fn _ -> :ignore end`                |
-|   `:halt`               | `fn _ -> :halt end`                  |
+No transition definitions for this state will ever be read. If the `current_state` of the machine becomes
+the `:halt` state, it stops and returns the `Match` struct's `data:` field.
+No `:end` state or trigger treatment is performed.
 
-For the `updater` there is only `:id` which expands to `fn d, _ -> d end` as mentioned above.
+* `:error` state and states starting with `:_`
 
-In action that would give
+Reserved for future use.
 
-      iex(8)> states = %{
-      ...(8)>    start: [{true, :id, :id, :stop}],
-      ...(8)>    stop:  [{true, fn _ -> {:halt, "..."} end, :id}]
-      ...(8)> }
-      ...(8)> run(~w[Headline Rest MoreRest], states)
-      {:stop, ~w[Headline ...], nil}
+### Some Detailed Examples
+
+Let's start with a single state machine.
+
+      iex(0)> parse_and_add = fn(string, data) -> 
+      ...(0)>   {n, _} = Integer.parse(string)
+      ...(0)>   %{data|sum: data.sum + n} end
+      ...(0)> add_error = fn(%{input: input, data: data}) ->
+      ...(0)>   %{data|errors: [input|data.errors]} end
+      ...(0)> states = %{
+      ...(0)>   start: [
+      ...(0)>     {~r(\d+), fn %{matched: [d], data: data} -> parse_and_add.(d, data) end},
+      ...(0)>     {true,    add_error},
+      ...(0)>   ],
+      ...(0)>   end: fn %{data: %{errors: errors, sum: sum}} -> {sum, Enum.reverse(errors)} end }
+      ...(0)> run(~w{12 error 30 incorrect}, %{sum: 0, errors: []}, states)
+      {42, ~w(error incorrect)}
+
+If the data is initially nil it needs not be passed into `run` and if the `transaction_fn` is a nop, it can be designated
+by `nil`.
+
+      iex(1)> states = %{
+      ...(1)>   start: [
+      ...(1)>     { ~r{(\d+)}, fn %{matched: [_, d]} -> d end, :halt },
+      ...(1)>     { true, nil } ]}
+      ...(1)> run(~w{ hello 42 84 }, states)
+      "42"
+
+The difference between `:halt` and `:end` can be demonstrated with these slighly modified machines
+
+      iex(2)> sm1 = %{
+      ...(2)>   start: [
+      ...(2)>     { ~r{(\d+)}, fn %{matched: [_, d]} -> d end, :halt },
+      ...(2)>     { true, nil } ],
+      ...(2)>   end: fn %{data: x} -> {n, _} = Integer.parse(x); n end }
+      ...(2)> sm2 = %{
+      ...(2)>   start: [
+      ...(2)>     { ~r{(\d+)}, fn %{matched: [_, d]} -> d end, :end },
+      ...(2)>     { true, nil } ],
+      ...(2)>   end: fn %{data: x} -> {n, _} = Integer.parse(x); n end }
+      ...(2)> { run(~w{ hello 42 84 }, sm1), run(~w{ hello 42 84 }, sm2) }
+      {"42", 42}
+
+So far we have only seen `Regex` and `true` triggers, the next example uses function triggers
+
+      iex(3)> odd? = &(rem(&1, 2) == 1)
+      ...(3)> states = %{ 
+      ...(3)>   start: [
+      ...(3)>     {odd?, fn %{input: n, data: sum} -> sum + n end},
+      ...(3)>     {true} ] }
+      ...(3)> run(1..6|>Enum.into([]), 0, states)
+      9
+
+Some might suggest that the `{true}` transition should be a default, but we prefer to raise an error
+if no transition matches
+
+      iex(4)> odd? = &(rem(&1, 2) == 1)
+      ...(4)> states = %{ 
+      ...(4)>   start: [
+      ...(4)>     {odd?, fn %{input: n, data: sum} -> sum + n end} ]}
+      ...(4)> run(1..6|>Enum.into([]), 0, states)
+      ** (RuntimeError) No transition found in state :start, on input 2
+
+An even more obvious exception is raised if a state has no transitions defined, that holds for the predefined
+`:start` state as for any other state.
+
+      iex(5)> states=%{}
+      ...(5)> run(~w[alpha beta], states)
+      ** (RuntimeError) No transitions defined for state :start
+
+      iex(6)> states=%{
+      ...(6)>   start: [
+      ...(6)>     {true, nil, :second} ]}
+      ...(6)> run(~w[alpha beta], states)
+      ** (RuntimeError) No transitions defined for state :second
 
 
 
