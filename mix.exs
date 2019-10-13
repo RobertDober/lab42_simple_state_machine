@@ -3,7 +3,7 @@ defmodule Lab42StateMachine.MixProject do
 
   @description "A Simple State Machine"
   @url "https://github.com/robertdober/lab42_simple_state_machine"
-  @version "0.2.0"
+  @version "0.2.1"
   def project do
     [
       aliases: [docs: &build_docs/1],
