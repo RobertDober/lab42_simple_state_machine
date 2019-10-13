@@ -1,7 +1,10 @@
 defmodule Lab42.SimpleStateMachine.Runner do
+
+  use Lab42.SimpleStateMachine.Types
   
   @moduledoc false
 
+  @spec run( state_t(), list(), any(), map()) :: any()
   def run(state, input, data, states)
   def run(_state, [], data, states), do: _end_state(states, data)
   def run(:halt, _, data, _), do: data.data
@@ -18,6 +21,7 @@ defmodule Lab42.SimpleStateMachine.Runner do
   end
 
 
+  @spec _end_state( map(), any() ) :: any()
   defp _end_state(states, data) do
     case Map.get(states, :end) do
       nil -> data.data
@@ -25,6 +29,7 @@ defmodule Lab42.SimpleStateMachine.Runner do
     end
   end
 
+  @spec _execute_transition( transition_t(), any(), any(), list(), any(), map() ) :: any()
   defp _execute_transition(transition, matched, input, rest, data, states)
   defp _execute_transition({_, nil, new_state}, _matched, _input, rest, data, states) do
     run(new_state, rest, data, states) 
@@ -34,6 +39,7 @@ defmodule Lab42.SimpleStateMachine.Runner do
     run(new_state, rest, %{data | data: new_data}, states) 
   end
 
+  @spec _find_transition( any(), transition_t(), state_t() ) :: maybe({complete_transition_t(), any()})
   defp _find_transition(input, transition, current_state)
   defp _find_transition(input, {trigger}, current_state) do
     _find_transition(input, {trigger, nil, current_state}, current_state)
@@ -43,12 +49,13 @@ defmodule Lab42.SimpleStateMachine.Runner do
   end
   defp _find_transition(input, {trigger, _fun, _ns}=transition, _) do 
     case _match_transition(trigger, input) do
-      nil ->  false
-      false -> false
+      nil ->  nil
+      false -> nil
       matched -> {transition, matched}
     end
   end
 
+  @spec _match_transition( trigger_t(), any() ) :: any()
   defp _match_transition(trigger, input)
   defp _match_transition(true,_), do: true
   defp _match_transition(trigger_fn, input) when is_function(trigger_fn) do

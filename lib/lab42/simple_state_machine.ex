@@ -1,4 +1,6 @@
 defmodule Lab42.SimpleStateMachine do
+
+  use Lab42.SimpleStateMachine.Types
   
   @moduledoc """
   ## A simple state machine.
@@ -156,6 +158,7 @@ defmodule Lab42.SimpleStateMachine do
   import Lab42.SimpleStateMachine.Data
   import Lab42.SimpleStateMachine.Runner
 
+  @spec run( list(), any(), maybe(map()) ) :: any()
   def run(input, data_or_states, states_or_nil \\ nil)
   def run(input, states, nil), do: run(:start, input, from_data(nil) , states)
   def run(input, data, states),do: run(:start, input, from_data(data), states)

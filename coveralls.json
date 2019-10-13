@@ -1,6 +1,7 @@
 {
   "skip_files": [
     "test/",
-    "lib/lab42/state_machine/types.ex"
+    "lib/lab42/state_machine/types.ex",
+    "lib/lab42/simple_state_machine/types.ex"
   ]
 }

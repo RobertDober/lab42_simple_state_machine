@@ -6,6 +6,8 @@ defmodule Lab42.SimpleStateMachine.Data do
 
   defstruct matched: nil, data: nil, input: nil
 
+  @type t :: %__MODULE__{matched: any(), data: any(), input: any()}
+
   def from_data(data) do
     %__MODULE__{data: data}
   end
